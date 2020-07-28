@@ -2,12 +2,14 @@
 
 include config
 
+SHELL = /bin/bash
 CUR_DIR := $(abspath .)
 DOCKER_IMAGE_VERSION ?= latest
 DOCKER_IMAGE_TAG ?= $(PROJECT_NAME):$(DOCKER_IMAGE_VERSION)
 DOCKER_BUILD_NO_CACHE ?= --no-cache
 DOCKER_RUN_COMMAND := docker run --rm -it --env-file ./config -v $(CUR_DIR):/workspace -w=/workspace --name $(PROJECT_NAME) $(DOCKER_IMAGE_TAG)
 
+CMAKE_BUILD_COMMAND := $()
 is_inside_container := $(shell awk -F/ '$$2 == "docker"' /proc/self/cgroup | wc -l)
 
 BUILD_TYPE ?= RelWithDebInfo
@@ -30,7 +32,7 @@ ifeq ($(is_inside_container), 0)
 else
 	-@rm -rf build
 	@mkdir build
-	@source config; cd build; cmake -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) .. && cmake --build .
+	@source config && cd build && conan install .. && cmake -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) .. && cmake --build .
 endif
 
 test:

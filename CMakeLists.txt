@@ -6,10 +6,14 @@ list (REMOVE_ITEM CPP_FILES src/main.cpp)
 
 # ADD SHARED OBJECT
 
+include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+conan_basic_setup()
+
 add_library ($ENV{PROJECT_NAME} SHARED ${CPP_FILES})
 
 target_include_directories ($ENV{PROJECT_NAME} PUBLIC include PRIVATE src/include)
 target_precompile_headers ($ENV{PROJECT_NAME} PRIVATE include/pch.h src/include/private-pch.h)
+message(STATUS "CONAN_LIBS: ${CONAN_LIBS}")
 
 include (GNUInstallDirs)
 
@@ -52,7 +56,7 @@ endforeach ()
 
 # Create Debian Package
 
-set (CPACK_GENERATOR DEB)
+set (CPACK_GENERATOR             DEB)
 set (CPACK_PACKAGE_NAME          $ENV{PROJECT_NAME})
 set (CPACK_PACKAGE_CONTACT       "Michael H.")
 set (CPACK_PACKAGE_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})

@@ -2,21 +2,31 @@
 
 include config
 
-SHELL = /bin/bash
-CUR_DIR := $(abspath .)
+# Compile docker variables
 DOCKER_IMAGE_VERSION ?= latest
 DOCKER_IMAGE_TAG ?= $(PROJECT_NAME):$(DOCKER_IMAGE_VERSION)
 DOCKER_BUILD_NO_CACHE ?= --no-cache
-DOCKER_RUN_COMMAND := docker run --rm -it --env-file ./config -v $(CUR_DIR):/workspace -w=/workspace --name $(PROJECT_NAME) $(DOCKER_IMAGE_TAG)
+DOCKER_RUN_COMMAND := docker run --rm -it --env-file ./config -v $(abspath .):/workspace -w=/workspace --name $(PROJECT_NAME) $(DOCKER_IMAGE_TAG)
 
-CMAKE_BUILD_COMMAND := $()
-is_inside_container := $(shell awk -F/ '$$2 == "docker"' /proc/self/cgroup | wc -l)
-
+# Set the default build type
 BUILD_TYPE ?= RelWithDebInfo
 
-.PHONY: build rebuild compile test deploy shell upgrade
+# Set the default shell
+SHELL = /bin/bash
+.DEFAULT_GOAL := help
 
-rebuild:
+# Compute variables
+is_inside_container := $(shell awk -F/ '$$2 == "docker"' /proc/self/cgroup | wc -l)
+
+
+# MAKEFILE TARGETS
+
+.PHONY: help build rebuild compile test package deploy shell compile-readme upgrade
+
+help: ## | Show this help.
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "\033[36m%-14s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+
+rebuild: ## | Rebuild the docker container image (no cache).
 ifeq ($(is_inside_container), 0)
 	docker build --rm $(DOCKER_BUILD_NO_CACHE) -t $(DOCKER_IMAGE_TAG) .
 else
@@ -24,9 +34,9 @@ else
 endif
 
 build: DOCKER_BUILD_NO_CACHE:=
-build: rebuild;
+build: rebuild; ## | Build the docker container image, but use the cache for already successful build stages.
 
-compile:
+compile: ## | Compile the source code inside the container.
 ifeq ($(is_inside_container), 0)
 	@$(DOCKER_RUN_COMMAND) /bin/bash -c "make compile"
 else
@@ -35,28 +45,39 @@ else
 	@source config && cd build && conan install .. && cmake -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) .. && cmake --build .
 endif
 
-test:
+test: ## | Run the test inside the container.
 ifeq ($(is_inside_container), 0)
 	@$(DOCKER_RUN_COMMAND) /bin/bash -c "make test"
 else
 	@make --directory build test
 endif
 
-deploy:
+package: ## | Build a package out of the binaries.
+ifeq ($(is_inside_container), 0)
+	@$(DOCKER_RUN_COMMAND) /bin/bash -c "make package"
+else
+	@make --directory build package
+endif
+
+deploy: ## | Upload the packages to the package server.
 ifeq ($(is_inside_container), 0)
 	@echo "Deploy the package."
 else
 	@echo "Must be executed outside the container."
 endif
 
-shell:
+shell: ## | Start a terminal inside the container.
 ifeq ($(is_inside_container), 0)
 	$(DOCKER_RUN_COMMAND) /bin/bash
 else
 	@echo "You are already inside the container."
 endif
 
-upgrade:
+compile-readme: ## | Compile a readme file from the Makefile documentation.
+	@sed -ne '/@sed/!s/^## //p' Makefile > readme.md
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "%-14s %s\n", $$1, $$2}' Makefile >> readme.md
+
+upgrade: ## | Upgrade this Makefile to the newest version.
 ifeq ($(is_inside_container), 0)
 	@echo "Upgrade the Makefile."
 else

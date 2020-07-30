@@ -30,5 +30,6 @@ ENV DEBIAN_FRONTEND=dialog
 RUN useradd -ms /bin/bash ${USERNAME}
 USER ${USERNAME}
 
+# Enable new GCC ABI
 RUN conan profile new default --detect \
     && conan profile update settings.compiler.libcxx=libstdc++11 default

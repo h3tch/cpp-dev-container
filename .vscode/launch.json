@@ -5,7 +5,7 @@
             "name": "Launch Main",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/test-add",
+            "program": "${workspaceFolder}/out/test-add",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
